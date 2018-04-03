@@ -1,13 +1,17 @@
 #!/usr/bin/env python
+# coding:utf-8
+
 import sys
 
+
 def printerr(errstr):
-    print>>sys.stderr, errstr 
-    
+    print>> sys.stderr, errstr
+
+
 def SetMultiDict(keys_array, value, retdict):
     deep = len(keys_array)
     key = keys_array[0]
-    #print key, deep
+    # print key, deep
     if deep > 1:
         if key in retdict.keys():
             SetMultiDict(keys_array[1:], value, retdict[key])
@@ -15,7 +19,8 @@ def SetMultiDict(keys_array, value, retdict):
             retdict[key] = {}
             SetMultiDict(keys_array[1:], value, retdict[key])
     else:
-            retdict[key] = value
+        retdict[key] = value
+
 
 def GetMultiDict(keys_array, retdict):
     deep = len(keys_array)
@@ -32,7 +37,6 @@ def GetMultiDict(keys_array, retdict):
             return None
 
 
-
 def demo():
     key1 = ['a', 'b', 'c']
     value1 = "value1"
@@ -46,6 +50,7 @@ def demo():
     print retdict
     print GetMultiDict(key1, retdict)
     print GetMultiDict(['a', 'b'], retdict)
+
 
 if "__main__" == __name__:
     demo()
