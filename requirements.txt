@@ -1,0 +1,7 @@
+# commpylib 依赖
+
+# 数据库驱动（二选一）
+pymysql>=1.0.0
+
+# 测试
+pytest>=7.0.0

@@ -1,113 +1,114 @@
 #!/usr/bin/env python
 # coding:utf-8
-from basicresult import CBasicResult
+"""邮件发送模块。
+
+提供发送邮件的功能（依赖外部命令 sendmail2）。
+"""
+
 import os
-import sys
-import copy
-import globalins_ex
-import ConfigParser
-
-MAIL_CFG_TEMPLATE = {'sender': None, 'receivers': '', 'cc': '', 'subject': ''}
+import shutil
+from typing import Optional
+from basicresult import CBasicResult
 
 
-class CSendMail(object):
-    _mailinfo = {}
+def SendFileMail(
+    sender: str,
+    receivers: str,
+    cc: str,
+    subject: str,
+    mailfile: str,
+    accessoryfile: str = "",
+    htmloption: bool = False,
+    passwd: Optional[str] = None,
+    log: Optional[object] = None,
+) -> CBasicResult:
+    """发送文件邮件。
 
-    def __init__(self):
-        pass
+    Args:
+        sender: 发件人
+        receivers: 收件人
+        cc: 抄送人
+        subject: 邮件主题
+        mailfile: 邮件内容文件
+        accessoryfile: 附件文件
+        htmloption: 是否为 HTML 邮件
+        passwd: 密码
+        log: 日志对象
 
-    @staticmethod
-    def SendFileMail(sender, receivers, cc, subject, mailfile, accessoryfile='', htmloption=False, passwd=None,
-                     log=None):
-        cmd = "sendmail2 '%s' '%s' '%s' '%s' %s " % (sender, receivers, cc, subject, mailfile)
+    Returns:
+        CBasicResult 结果对象
+    """
+    # 检查命令是否存在
+    cmd_path = shutil.which("sendmail2")
+    if cmd_path is None:
+        return CBasicResult(-1, "sendmail2 command not found", -1, "command not exists")
 
-        if len(accessoryfile) > 0:
-            cmd = cmd + " "
-            cmd = cmd + accessoryfile
+    cmd = f"sendmail2 '{sender}' '{receivers}' '{cc}' '{subject}' {mailfile}"
 
-        if htmloption:
-            cmd = cmd + " --html"
+    if accessoryfile:
+        cmd = f"{cmd} {accessoryfile}"
 
-        if None != passwd:
-            passwdinfo = "--pass=%s" % passwd
-            cmd = cmd + passwdinfo
+    if htmloption:
+        cmd = f"{cmd} --html"
 
-        if None != log:
-            log.info(cmd)
-        else:
-            print cmd
+    if passwd:
+        cmd = f"{cmd} --pass={passwd}"
 
+    if log is not None:
+        log.info(cmd)
+    else:
+        print(cmd)
+
+    try:
         ret = os.system(cmd)
-        if 0 != ret:
-            return CBasicResult(-1, "SendMail %s failed" % subject, -1, cmd)
-
+        if ret != 0:
+            return CBasicResult(-1, f"SendMail failed with code {ret}", -1, cmd)
         return CBasicResult()
-
-    @staticmethod
-    def SendStringMail(sender, receivers, cc, subject, mailstring, accessoryfile='', htmloption=False, passwd=None,
-                       log=None):
-        mailfile = ".CSendMail.tmpfile"
-        f = open(mailfile, 'w')
-        f.write(mailstring)
-        f.close()
-
-        return CSendMail.SendFileMail(sender, receivers, cc, subject, mailfile, accessoryfile, htmloption, passwd, log)
-
-    @staticmethod
-    def SendCfgFileMail(cfg_sec_name, mailfile, accessoryfile='', htmloption=False, \
-                        passwd=None, log=None, refresh=False, subject_suffix=''):
-        # use cfg_sec_name(config section name) as key, before use this method you need to use globalins_ex to init
-        if not CSendMail._mailinfo.has_key(cfg_sec_name):
-            rst, cfg = globalins_ex.GlobalIns.getCfgInstance(refresh)
-            if 0 != rst._resultcode:
-                return rst
-
-            try:
-                mail_cfg = copy.deepcopy(MAIL_CFG_TEMPLATE)
-                mail_cfg['sender'] = cfg.get(cfg_sec_name, 'sender')
-                mail_cfg['receivers'] = cfg.get(cfg_sec_name, 'receivers')
-                mail_cfg['cc'] = cfg.get(cfg_sec_name, 'cc')
-                subject = cfg.get(cfg_sec_name, 'subject') + subject_suffix
-                mail_cfg['subject'] = subject
-                CSendMail._mailinfo[cfg_sec_name] = mail_cfg
-
-            except ConfigParser.NoSectionError, e:
-                return CBasicResult(-1, e, -1, e)
-
-        mailconfig = CSendMail._mailinfo[cfg_sec_name]
-
-        return CSendMail.SendFileMail(mailconfig['sender'], mailconfig['receivers'], mailconfig['cc'],
-                                      mail_cfg['subject'], \
-                                      mailfile, accessoryfile, htmloption, passwd, log)
-
-    @staticmethod
-    def SendCfgStringMail(cfg_sec_name, mailstring, accessoryfile='', htmloption=False, \
-                          passwd=None, log=None, refresh=False, subject_suffix=''):
-        mailfile = ".CSendMail.tmpfile"
-        f = open(mailfile, 'w')
-        f.write(mailstring)
-        f.close()
-
-        return CSendMail.SendCfgFileMail(cfg_sec_name, mailfile, accessoryfile, htmloption, passwd, log, refresh,
-                                         subject_suffix)
+    except Exception as e:
+        return CBasicResult(-1, "SendMail execution failed", -1, str(e))
 
 
-def demo():
-    # rst = CSendMail.SendStringMail("hillzhang", "hillzhang", "", "test", "this is a test")
-    # if 0 != rst._resultcode:
-    #     print rst
-    #     sys.exit(-1)
+def SendStringMail(
+    sender: str,
+    receivers: str,
+    cc: str,
+    subject: str,
+    mailstring: str,
+    accessoryfile: str = "",
+    htmloption: bool = False,
+    passwd: Optional[str] = None,
+    log: Optional[object] = None,
+) -> CBasicResult:
+    """发送字符串邮件。
 
-    rst = globalins_ex.GlobalIns.setConfigPath("globalins_demo_config.ini")
-    if 0 != rst._resultcode:
-        return rst
+    Args:
+        sender: 发件人
+        receivers: 收件人
+        cc: 抄送人
+        subject: 邮件主题
+        mailstring: 邮件内容字符串
+        accessoryfile: 附件文件
+        htmloption: 是否为 HTML 邮件
+        passwd: 密码
+        log: 日志对象
 
-    rst = CSendMail.SendCfgStringMail('mail_demo', 'this is a cfg mail test', 'test.py')
-    if 0 != rst._resultcode:
-        print rst
-        sys.exit(-1)
-    print "success"
+    Returns:
+        CBasicResult 结果对象
+    """
+    mailfile = ".CSendMail.tmpfile"
+    try:
+        with open(mailfile, "w", encoding="utf-8") as f:
+            f.write(mailstring)
+    except IOError as e:
+        return CBasicResult(-1, "Write temp file failed", -1, str(e))
+
+    return SendFileMail(
+        sender, receivers, cc, subject, mailfile, accessoryfile, htmloption, passwd, log
+    )
 
 
-if "__main__" == __name__:
-    demo()
+if "__main__" == "__main__":
+    rst = SendStringMail(
+        "sender@test.com", "receiver@test.com", "", "test", "this is a test"
+    )
+    print(rst)
